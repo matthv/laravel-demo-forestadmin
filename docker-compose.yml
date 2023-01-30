@@ -1,0 +1,59 @@
+version: "3.9"
+volumes:
+  db-store:
+  psysh-store:
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ./infra/docker/php/Dockerfile
+      target: ${APP_BUILD_TARGET:-development}
+    volumes:
+      - type: bind
+        source: ./src
+        target: /workspace
+      - type: volume
+        source: psysh-store
+        target: /root/.config/psysh
+        volume:
+          nocopy: true
+    environment:
+      - APP_DEBUG=${APP_DEBUG:-true}
+      - APP_ENV=${APP_ENV:-local}
+      - APP_URL=${APP_URL:-http://localhost:8000}
+      - LOG_CHANNEL=${LOG_CHANNEL:-stderr}
+      - LOG_STDERR_FORMATTER=${LOG_STDERR_FORMATTER:-Monolog\Formatter\JsonFormatter}
+      - DB_CONNECTION=${DB_CONNECTION:-pgsql}
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_DATABASE=${DB_DATABASE:-laravel-db}
+      - DB_USERNAME=${DB_USERNAME:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - FOREST_AUTH_SECRET=${FOREST_AUTH_SECRET}
+      - FOREST_ENV_SECRET=${FOREST_ENV_SECRET}
+      - FOREST_URL=${FOREST_URL:-http://localhost:3001}
+
+  web:
+    build:
+      context: .
+      dockerfile: ./infra/docker/nginx/Dockerfile
+    ports:
+      - target: 80
+        published: ${APP_PORT}
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: bind
+        source: ./src
+        target: /workspace
+
+  db:
+    image: postgres
+    restart: always
+    volumes:
+      - db-store:/var/lib/postgresql/data
+    ports:
+      - "5440:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: laravel-db
