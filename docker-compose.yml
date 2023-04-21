@@ -17,6 +17,9 @@ services:
         target: /root/.config/psysh
         volume:
           nocopy: true
+#    ports:
+#      - "8000:8000"
+#    command: php artisan serve --host=0.0.0.0 --port=8000
     environment:
       - APP_DEBUG=${APP_DEBUG:-true}
       - APP_ENV=${APP_ENV:-local}
@@ -31,18 +34,24 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-postgres}
       - FOREST_AUTH_SECRET=${FOREST_AUTH_SECRET}
       - FOREST_ENV_SECRET=${FOREST_ENV_SECRET}
-      - FOREST_URL=${FOREST_URL:-http://localhost:3001}
+#      - FOREST_URL=${FOREST_URL:-https://host.docker.internal:3001}
+      - FOREST_URL=${FOREST_URL:-https://api.development.forestadmin.com}
 
   web:
-    build:
-      context: .
-      dockerfile: ./infra/docker/nginx/Dockerfile
+    image: nginx:latest
+    networks:
+      default:
+        aliases:
+          - api.development.forestadmin.com
+#      extra_hosts:
+#        - "host.docker.internal:host-gateway"
+#        - "api.development.forestadmin.com:127.0.0.1"
     ports:
-      - target: 80
-        published: ${APP_PORT}
-        protocol: tcp
-        mode: host
+      - "8000:80"
     volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /opt/homebrew/etc/nginx/ssl/development.forestadmin.com.crt:/etc/ssl/certs/ssl.crt
+      - /opt/homebrew/etc/nginx/ssl/device.key:/etc/ssl/private/ssl.key
       - type: bind
         source: ./src
         target: /workspace
